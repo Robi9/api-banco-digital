@@ -1,0 +1,20 @@
+# docker-compose.yml
+version: "3"
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000" 
+    links:
+     - "mongodb"
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - data_:\data\db
+      
+volumes:
+  data_:
+    external: true      
