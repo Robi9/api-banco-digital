@@ -7,10 +7,11 @@ import (
     "fmt"
     "sync"
     "context"
+    "strconv"
     "io/ioutil"
     "encoding/json"
-    //"go.mongodb.org/mongo-driver/bson"
-    //"go.mongodb.org/mongo-driver/bson/primitive"
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/bson/primitive"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
     "time"
@@ -71,7 +72,8 @@ type Account struct {
 func routes() {
     myRouter := mux.NewRouter().StrictSlash(true)
     myRouter.HandleFunc("/accounts", listaContas)
-    myRouter.HandleFunc("/account", criaNovaConta).Methods("POST")
+    myRouter.HandleFunc("/accounts", criaNovaConta).Methods("POST")//mudei para accounts
+    myRouter.HandleFunc("/accounts/{ID}", getBalance)
 
     log.Fatal(http.ListenAndServe(":5000", myRouter))
 }
@@ -102,7 +104,7 @@ func criaNovaConta(w http.ResponseWriter, r *http.Request) {
     account.Secret = SecretToHash(account.Secret)
 
     //Zera valor da conta
-    account.Balance = 1
+    account.Balance = 0
 
     //Cria um handle da respectiva coleção
     collection := client.Database(DB).Collection(ACCOUNT)
@@ -128,6 +130,65 @@ func SecretToHash(secret string) string {
 //Retorna a lista de contas cadastradas
 func listaContas(w http.ResponseWriter, r *http.Request) {
    fmt.Println("Endpoint Acessado.")
+
+   //Define filter query for fetching specific document from collection
+    filter := bson.D{{}} //bson.D{{}} specifies 'all documents'
+    accounts := []Account{}
+    //Get MongoDB connection using connectionhelper.
+    client, err := getMongoClient()
+    if err != nil {
+        fmt.Println(err)
+    }
+    //Create a handle to the respective collection in the database.
+    collection := client.Database(DB).Collection(ACCOUNT)
+    //Perform Find operation & validate against the error.
+    cur, findError := collection.Find(context.TODO(), filter)
+    if findError != nil {
+        fmt.Println(findError)
+    }
+    //Map result to slice
+    for cur.Next(context.TODO()) {
+        t := Account{}
+        err := cur.Decode(&t)
+        if err != nil {
+            fmt.Println(err)
+        }
+        accounts = append(accounts, t)
+    }
+    // once exhausted, close the cursor
+    cur.Close(context.TODO())
+    json.NewEncoder(w).Encode(accounts)
+}
+
+func getBalance(w http.ResponseWriter, r *http.Request) {
+
+   
+    vars := mux.Vars(r)
+    id := vars["ID"]
+    _id, _ := strconv.Atoi(id)
+
+    //Define filter query for fetching specific document from collection
+    filter := bson.D{primitive.E{Key: "_id", Value: _id}}
+    //Get MongoDB connection using connectionhelper.
+    client, err := getMongoClient()
+    if err != nil {
+        fmt.Println(err)
+    }
+    //Create a handle to the respective collection in the database.
+    collection := client.Database(DB).Collection(ACCOUNT)
+
+    cur, findError := collection.Find(context.TODO(), filter)
+    if findError != nil {
+        fmt.Println(findError)
+    }
+
+    var t Account 
+    err = cur.Decode(&t)
+    if err != nil {
+        fmt.Println(err)
+    }
+    
+    json.NewEncoder(w).Encode(t)
 }
 
 func main() {
