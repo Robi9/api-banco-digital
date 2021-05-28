@@ -1,5 +1,6 @@
 // main.go
 package main
+
 import (
     "log"
     "net/http"
@@ -15,7 +16,7 @@ import (
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
     "time"
-    "golang.org/x/crypto/bcrypt"
+    //"golang.org/x/crypto/bcrypt"
 
 )
 
@@ -34,6 +35,7 @@ const (
     CONNECTIONSTRING = "mongodb://mongodb:27017" //localhost
     DB               = "api-banco-digital"
     ACCOUNT          = "accounts"
+    LOGIN            = "login"
 )
 
 //GetMongoClient - Retorne a conexão com mongodb
@@ -71,7 +73,8 @@ type Account struct {
 //Função de rotas
 func routes() {
     myRouter := mux.NewRouter().StrictSlash(true)
-    myRouter.HandleFunc("/accounts", newAccount).Methods("POST")//mudei para accounts
+    myRouter.HandleFunc("/login", authLogin).Methods("POST")
+    myRouter.HandleFunc("/accounts", newAccount).Methods("POST")
     myRouter.HandleFunc("/accounts", getAllAccounts)
     myRouter.HandleFunc("/accounts/{ID}/balance", getBalance)
 
@@ -115,16 +118,6 @@ func newAccount(w http.ResponseWriter, r *http.Request) {
     }
 
     json.NewEncoder(w).Encode(account)
-}
-
-//Transforma o secret em hash
-func SecretToHash(secret string) string {
-    cost := bcrypt.DefaultCost
-    hash, err := bcrypt.GenerateFromPassword([]byte(secret), cost)
-    if err != nil {
-        fmt.Println(err)
-    }
-    return string(hash)
 }
 
 //Retorna a lista de contas cadastradas
@@ -190,6 +183,6 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-    fmt.Println("API-TEST.")
+    fmt.Println("API-BANCO-DIGITAL.")
     routes()
 }

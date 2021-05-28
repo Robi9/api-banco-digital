@@ -15,12 +15,15 @@ RUN go get -u go.mongodb.org/mongo-driver/bson/primitive
 RUN go get -u go.mongodb.org/mongo-driver/mongo
 RUN go get -u go.mongodb.org/mongo-driver/mongo/options
 RUN go get golang.org/x/crypto/bcrypt
+RUN go get github.com/dgrijalva/jwt-go
 
 # copia o arquivo do diretório do host para o conteiner
 COPY main.go main.go
+COPY utils.go utils.go
+COPY auth.go auth.go
 
 #Compilação do arquivo
-RUN go build main.go
+RUN go build main.go auth.go utils.go
 RUN cp main /
 
 #Execução do arquivo main
