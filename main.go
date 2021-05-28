@@ -71,17 +71,17 @@ type Account struct {
 //Função de rotas
 func routes() {
     myRouter := mux.NewRouter().StrictSlash(true)
-    myRouter.HandleFunc("/accounts", listaContas)
-    myRouter.HandleFunc("/accounts", criaNovaConta).Methods("POST")//mudei para accounts
-    myRouter.HandleFunc("/accounts/{ID}", getBalance)
+    myRouter.HandleFunc("/accounts", newAccount).Methods("POST")//mudei para accounts
+    myRouter.HandleFunc("/accounts", getAllAccounts)
+    myRouter.HandleFunc("/accounts/{ID}/balance", getBalance)
 
     log.Fatal(http.ListenAndServe(":5000", myRouter))
 }
 
 //Cria novo Account e armazena no BD
-func criaNovaConta(w http.ResponseWriter, r *http.Request) {
+func newAccount(w http.ResponseWriter, r *http.Request) {
 
-    fmt.Println("Endpoint accounts: apiCriaNovaConta")
+    fmt.Println("Endpoint: apiNewAccount")
     reqBody,_ := ioutil.ReadAll(r.Body)
 
     var account Account
@@ -128,25 +128,26 @@ func SecretToHash(secret string) string {
 }
 
 //Retorna a lista de contas cadastradas
-func listaContas(w http.ResponseWriter, r *http.Request) {
-   fmt.Println("Endpoint Acessado.")
+func getAllAccounts(w http.ResponseWriter, r *http.Request) {
+   fmt.Println("Endpoint: apiGetAllAccounts")
 
-   //Define filter query for fetching specific document from collection
-    filter := bson.D{{}} //bson.D{{}} specifies 'all documents'
+   //Defina a consulta do filtro para buscar um documento específico da coleção
+    filter := bson.D{{}} //bson.D{{}} especifica 'todos os documentos'
     accounts := []Account{}
-    //Get MongoDB connection using connectionhelper.
+    //Faz a conexão com o MongoDB
     client, err := getMongoClient()
     if err != nil {
         fmt.Println(err)
     }
-    //Create a handle to the respective collection in the database.
+    //Cria um handle da respectiva coleção
     collection := client.Database(DB).Collection(ACCOUNT)
-    //Perform Find operation & validate against the error.
+
+    //Executa a operação Localizar e valide o erro.
     cur, findError := collection.Find(context.TODO(), filter)
     if findError != nil {
         fmt.Println(findError)
     }
-    //Map result to slice
+    //Map de resultados para a slice
     for cur.Next(context.TODO()) {
         t := Account{}
         err := cur.Decode(&t)
@@ -155,40 +156,37 @@ func listaContas(w http.ResponseWriter, r *http.Request) {
         }
         accounts = append(accounts, t)
     }
-    // once exhausted, close the cursor
+    // quando terminado fecha o cursor
     cur.Close(context.TODO())
     json.NewEncoder(w).Encode(accounts)
 }
 
 func getBalance(w http.ResponseWriter, r *http.Request) {
-
    
+    fmt.Println("Endpoint: apiGetBalance")
+
     vars := mux.Vars(r)
     id := vars["ID"]
     _id, _ := strconv.Atoi(id)
 
-    //Define filter query for fetching specific document from collection
+    result := Account{}
+    //Define a consulta do filtro para buscar um documento específico da coleção
     filter := bson.D{primitive.E{Key: "_id", Value: _id}}
-    //Get MongoDB connection using connectionhelper.
+    //Faz a conexão com o MongoDB.
     client, err := getMongoClient()
     if err != nil {
         fmt.Println(err)
     }
-    //Create a handle to the respective collection in the database.
+    //Cria um handle da respectiva coleção.
     collection := client.Database(DB).Collection(ACCOUNT)
 
-    cur, findError := collection.Find(context.TODO(), filter)
-    if findError != nil {
-        fmt.Println(findError)
-    }
+    err = collection.FindOne(context.TODO(), filter).Decode(&result)
 
-    var t Account 
-    err = cur.Decode(&t)
-    if err != nil {
+    if err == nil {
+        json.NewEncoder(w).Encode(result.Balance)
+    } else {
         fmt.Println(err)
     }
-    
-    json.NewEncoder(w).Encode(t)
 }
 
 func main() {
