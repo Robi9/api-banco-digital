@@ -16,7 +16,6 @@ import (
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
     "time"
-    //"golang.org/x/crypto/bcrypt"
 
 )
 
@@ -35,7 +34,6 @@ const (
     CONNECTIONSTRING = "mongodb://mongodb:27017" //localhost
     DB               = "api-banco-digital"
     ACCOUNT          = "accounts"
-    LOGIN            = "login"
 )
 
 //GetMongoClient - Retorne a conexão com mongodb
