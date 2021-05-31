@@ -289,6 +289,95 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
     return
 }
 
+//Retorna todas as Transferências do usuário autenticado
+func getAllTransfers(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Endpoint: apiGetAllTransfers")
+
+    token := verifyToken(w,r)
+    if token == nil{
+        json.NewEncoder(w).Encode("Token inválido, entre em sua conta novamente!")
+        return
+    }
+
+    var ID_Account int
+    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+        ID_Account = int(claims["ID"].(float64))
+    } else {
+         fmt.Println("Erro ao recuperar dados do Token")
+        return
+    }
+
+   //Defina a consulta do filtro para buscar um documento específico da coleção
+    filter := bson.D{primitive.E{Key: "account_origin_id", Value: ID_Account}}
+    transfers := []Transfer{}
+    //Faz a conexão com o MongoDB
+    client, err := getMongoClient()
+    if err != nil {
+        fmt.Println(err)
+    }
+    //Cria um handle da respectiva coleção
+    collection := client.Database(DB).Collection(TRANSFER)
+
+    //Executa a operação Localizar e valide o erro.
+    cur, findError := collection.Find(context.TODO(), filter)
+    if findError != nil {
+        fmt.Println(findError)
+    }
+    //Map de resultados para a slice
+    for cur.Next(context.TODO()) {
+        t := Transfer{}
+        err := cur.Decode(&t)
+        if err != nil {
+            fmt.Println(err)
+        }
+        transfers = append(transfers, t)
+    }
+    // quando terminado fecha o cursor
+    cur.Close(context.TODO())
+    json.NewEncoder(w).Encode(transfers)
+}
+
+func newDeposit(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Endpoint: apiMakeDeposit")
+
+    //Pega hora/data de agora
+    start := time.Now()
+
+    reqBody,_ := ioutil.ReadAll(r.Body)
+    var deposit Deposit
+    err := json.Unmarshal(reqBody, &deposit)
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    //Gera um ID para a transferencia
+    idDeposit := uuid.New()
+    deposit.ID = idDeposit.String()
+
+    //Formata hora/data e adiciona em Created_At
+    deposit.Created_At = start.Format(("02/01/2006 15:04:05"))
+
+    //Pega conta para depósito
+    accountDestination := getAccount(deposit.CPF)
+
+    deposit.Account_Destination_Id = accountDestination.ID
+
+    //Calcula novo balance da conta de depósito
+    balance := accountDestination.Balance+deposit.Amount
+
+    //Atualiza balance da conta de depósito e valida
+    err = nil
+    err = updateBalanceAccount(accountDestination.ID, balance)
+
+    if err != nil{
+        json.NewEncoder(w).Encode("Erro no depósito, tente novamente!")
+        return
+    }else{
+        storeDeposit(deposit)
+        json.NewEncoder(w).Encode("Depósito realizado com sucesso!")
+    }    
+}
+
 func main() {
     fmt.Println("API-BANCO-DIGITAL.")
     routes()
