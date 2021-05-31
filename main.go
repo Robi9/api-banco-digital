@@ -96,7 +96,7 @@ type Deposit struct{
 func routes() {
     myRouter := mux.NewRouter().StrictSlash(true)
     myRouter.HandleFunc("/login", authLogin).Methods("POST") //Faz login
-    //myRouter.HandleFunc("/transfers", newTransfer).Methods("POST") //Realiza transferência
+    myRouter.HandleFunc("/transfers", newTransfer).Methods("POST") //Realiza transferência
     //myRouter.HandleFunc("/transfers", getAllTransfers) //Retorna todas transferências feitas pelo usuário logado
     myRouter.HandleFunc("/accounts", newAccount).Methods("POST") //Cria nova conta
     myRouter.HandleFunc("/accounts", getAllAccounts) //Retorna todas as contas cadastradas
@@ -204,6 +204,89 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
     } else {
         fmt.Println(err)
     }
+}
+
+func newTransfer(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Endpoint: apiNewTransfer")
+
+    //Pega hora/data de agora
+    start := time.Now()
+
+    //Verifica e pega token
+    token := verifyToken(w,r)
+    if token == nil{
+        json.NewEncoder(w).Encode("Token inválido, entre em sua conta novamente!")
+        return
+    }
+   
+    //Pega dados de transferência
+    transfer := Transfer{}
+    reqBody,_ := ioutil.ReadAll(r.Body)
+    err := json.Unmarshal(reqBody, &transfer)
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    var result, accountOrigin, accountDestination Account
+
+    //Extrai dados do token
+    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+        result.ID = int(claims["ID"].(float64))
+        result.CPF = claims["cpf"].(string)
+    } else {
+        fmt.Println("Erro ao recuperar dados do Token")
+        return
+    }
+
+    //Gera um ID para a transferencia
+    idTransfer := uuid.New()
+    transfer.ID = idTransfer.String()
+
+    //Pega o ID de origem que estava no Token
+    transfer.Account_Origin_Id = result.ID
+
+    //Formata hora/data e adiciona em Created_At
+    transfer.Created_At = start.Format(("02/01/2006 15:04:05"))
+
+    //Busca accountOrigin partindo do CPF
+    accountOrigin = getAccount(result.CPF)
+
+    //Define a consulta do filtro para buscar um documento específico da coleção
+    filter := bson.D{primitive.E{Key: "_id", Value: transfer.Account_Destination_Id}}
+
+    //Faz a conexão com o MongoDB.
+    client, err := getMongoClient()
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    //Cria um handle da respectiva coleção.
+    collection := client.Database(DB).Collection(ACCOUNT)
+
+    err = nil
+    //Busca a accountDestination e faz a validação
+    err = collection.FindOne(context.TODO(), filter).Decode(&accountDestination)
+    if err != nil {
+        fmt.Println(err)
+    }
+    //Verificação de balance disponível na accountOrigem
+    if accountOrigin.Balance >= transfer.Amount {
+        //Calculo do Balance novo de conta de origem e destino
+        newBalanceAccountOrigin  := accountOrigin.Balance - transfer.Amount
+        newBalanceAccountDestination := accountDestination.Balance + transfer.Amount
+
+        //Atualiza Balance de ambas as contas
+        updateBalanceAccount(accountOrigin.ID, newBalanceAccountOrigin)
+        updateBalanceAccount(accountDestination.ID, newBalanceAccountDestination)
+
+        json.NewEncoder(w).Encode("Transferência realizada com sucesso!")
+    }else{
+        json.NewEncoder(w).Encode("Saldo insuficiente.")
+    }
+
+    //Armazena a transferência no BD
+    storeTransfer(transfer)
+    return
 }
 
 func main() {
