@@ -9,8 +9,8 @@ import (
     "golang.org/x/crypto/bcrypt"
 
 )
-//Retorna uma conta
-func getAccount(cpf string ) Account {
+//Retorna uma conta partindo do cpf do usuário
+func getAccount(cpf string) (Account) {
 
     result := Account{}
     //Define a consulta do filtro para buscar um documento específico da coleção
@@ -48,4 +48,68 @@ func checkSecret(secretH string, secret string) bool {
 		return false
 	}
 	return true
+}
+
+//Atualiza o balance de uma conta para um novo valor
+func updateBalanceAccount(id int, balance float64) (error){
+
+	//Define a consulta do filtro para buscar um documento específico da coleção
+	filter := bson.D{primitive.E{Key: "_id", Value: id}}
+
+	//Define o atualizador para especificar a mudança a ser atualizada.
+	updater := bson.D{primitive.E{Key: "$set", Value: bson.D{
+		primitive.E{Key: "balance", Value: balance},
+	}}}
+
+	// //Faz a conexão com o MongoDB.
+	client, err := getMongoClient()
+	if err != nil {
+		fmt.Println(err)
+	}
+	collection := client.Database(DB).Collection(ACCOUNT)
+
+	//Executa a operação UpdateOne e valida o erro.
+	_, err = collection.UpdateOne(context.TODO(), filter, updater)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//Armazena a transferencia no BD
+func storeTransfer(transfer Transfer) {
+
+	client, err := getMongoClient()
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    collection := client.Database(DB).Collection(TRANSFER)
+    //Insere o dado e valida
+    _, err = collection.InsertOne(context.TODO(), transfer)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    return
+}
+
+//Armazena depósitos realizados no BD
+func storeDeposit(deposit Deposit) {
+
+	client, err := getMongoClient()
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    collection := client.Database(DB).Collection(DEPOSIT)
+    //Insere o dado e valida
+    _, err = collection.InsertOne(context.TODO(), deposit)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    return
+	
 }

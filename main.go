@@ -16,6 +16,8 @@ import (
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
     "time"
+    "github.com/google/uuid"
+    "github.com/dgrijalva/jwt-go"
 
 )
 
@@ -34,6 +36,8 @@ const (
     CONNECTIONSTRING = "mongodb://mongodb:27017" //localhost
     DB               = "api-banco-digital"
     ACCOUNT          = "accounts"
+    TRANSFER         = "transfers"
+    DEPOSIT          = "deposits"
 )
 
 //GetMongoClient - Retorne a conexão com mongodb
@@ -68,13 +72,36 @@ type Account struct {
     Created_At string  `json:"created_at" bson:"created_at"`
 }
 
+//Estrutura de Transfer
+type Transfer struct{
+    ID                     string     `json:"ID"  bson:"_id,omitempty"`
+    Account_Origin_Id      int        `json:"account_origin_id"  bson:"account_origin_id"`
+    Account_Destination_Id int        `json:"account_destination_id"  bson:"account_destination_id"`
+    Amount                 float64      `json:"amount"  bson:"amount"` 
+    Created_At             string     `json:"created_at"  bson:"created_at"`
+
+}
+
+//Estrutura de Deposit
+type Deposit struct{
+    ID                     string     `json:"ID"  bson:"_id,omitempty"`
+    CPF                    string     `json:"cpf"  bson:"cpf"`
+    Account_Destination_Id int        `json:"account_destination_id"  bson:"account_destination_id"`
+    Amount                 float64    `json:"amount"  bson:"amount"` 
+    Created_At             string     `json:"created_at"  bson:"created_at"`
+
+}
+
 //Função de rotas
 func routes() {
     myRouter := mux.NewRouter().StrictSlash(true)
-    myRouter.HandleFunc("/login", authLogin).Methods("POST")
-    myRouter.HandleFunc("/accounts", newAccount).Methods("POST")
-    myRouter.HandleFunc("/accounts", getAllAccounts)
-    myRouter.HandleFunc("/accounts/{ID}/balance", getBalance)
+    myRouter.HandleFunc("/login", authLogin).Methods("POST") //Faz login
+    //myRouter.HandleFunc("/transfers", newTransfer).Methods("POST") //Realiza transferência
+    //myRouter.HandleFunc("/transfers", getAllTransfers) //Retorna todas transferências feitas pelo usuário logado
+    myRouter.HandleFunc("/accounts", newAccount).Methods("POST") //Cria nova conta
+    myRouter.HandleFunc("/accounts", getAllAccounts) //Retorna todas as contas cadastradas
+    myRouter.HandleFunc("/accounts/{ID}/balance", getBalance) //Retorna o saldo da conta que pertence ao ID informado
+    //myRouter.HandleFunc("/deposits", newDeposit).Methods("POST") //Realiza um depósito em uma conta cadastrada
 
     log.Fatal(http.ListenAndServe(":5000", myRouter))
 }
@@ -90,7 +117,6 @@ func newAccount(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         fmt.Println(err)
     }
-    fmt.Println(account.ID)
 
     client, err := getMongoClient()
     if err != nil {
@@ -105,7 +131,7 @@ func newAccount(w http.ResponseWriter, r *http.Request) {
     account.Secret = SecretToHash(account.Secret)
 
     //Zera valor da conta
-    account.Balance = 0
+    account.Balance =  0.0
 
     //Cria um handle da respectiva coleção
     collection := client.Database(DB).Collection(ACCOUNT)
@@ -184,3 +210,4 @@ func main() {
     fmt.Println("API-BANCO-DIGITAL.")
     routes()
 }
+
