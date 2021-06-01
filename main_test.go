@@ -26,7 +26,7 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 //Função de rotas igual a de main.go, para auxiliar os testes.
 func Router() *mux.Router {
     myRouter := mux.NewRouter().StrictSlash(true)
-    myRouter.HandleFunc("/login", authLogin).Methods("POST") //Faz login
+    myRouter.HandleFunc("/login", newLogin).Methods("POST") //Faz login
     myRouter.HandleFunc("/transfers", newTransfer).Methods("POST") //Realiza transferência
     myRouter.HandleFunc("/transfers", getAllTransfers) //Retorna todas transferências feitas pelo usuário logado
     myRouter.HandleFunc("/accounts", newAccount).Methods("POST") //Cria nova conta OK
@@ -104,7 +104,7 @@ func TestNewDeposit(t *testing.T) {
 //Testa a rota de adquirir balance de uma conta
 func TestGetBalance(t *testing.T) {
 
-	//Chamamos a rota para o id 2
+	//Chamamos a rota para o id 3
 	req, _ := http.NewRequest("GET", "/accounts/3/balance", nil)
 
 	response := executeRequest(req)
@@ -114,4 +114,23 @@ func TestGetBalance(t *testing.T) {
     json.Unmarshal(response.Body.Bytes(), &m)
     //printa o Balance da conta com o ID passado na solicitação
     fmt.Println("Balance da conta com ID 3 é:", m)
+}
+
+//Teste da rota POST '/transfers' que realiza transferências de uma conta logada para outra cadastrada
+func TestNewTransfer(t *testing.T) {
+
+	//Usaremos o token da conta criada na função TestNewAccount()
+	var jsonTrans = []byte(`{ "ID" : "", "account_origin_id" : 0, "account_destination_id" : 1, "amount" : 10.0, "created_at" : ""}`)
+	req, _ := http.NewRequest("POST", "/transfers", bytes.NewBuffer(jsonTrans))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MywiY3BmIjoiNTU1NSIsInNlY3JldCI6IjEyMzQ1In0.25BL0qmCrmpZKmPkUatLi5gfnLMtnZv2N-5aCXKHY1o")
+
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var m string
+    json.Unmarshal(response.Body.Bytes(), &m)
+
+	fmt.Println(m)	
+
 }

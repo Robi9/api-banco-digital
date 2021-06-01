@@ -12,7 +12,7 @@ import (
 //Retorna uma conta partindo do cpf do usuário
 func getAccount(cpf string) (Account) {
 
-    result := Account{}
+    var result Account
     //Define a consulta do filtro para buscar um documento específico da coleção
     filter := bson.D{primitive.E{Key: "cpf", Value: cpf}}
     //Faz a conexão com o MongoDB.
@@ -27,6 +27,7 @@ func getAccount(cpf string) (Account) {
 
     if err != nil {
         fmt.Println(err)
+        return result
     }
 
     return result
@@ -110,6 +111,5 @@ func storeDeposit(deposit Deposit) {
         fmt.Println(err)
         return
     }
-    return
-	
+    return	
 }

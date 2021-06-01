@@ -293,6 +293,8 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
     err = collection.FindOne(context.TODO(), filter).Decode(&accountDestination)
     if err != nil {
         fmt.Println(err)
+        json.NewEncoder(w).Encode("Erro ao realizar transferência, verifique os dados e tente novamente!")
+        return
     }
     //Verificação de balance disponível na accountOrigem
     if accountOrigin.Balance >= transfer.Amount {
@@ -301,17 +303,35 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
         newBalanceAccountDestination := accountDestination.Balance + transfer.Amount
 
         //Atualiza Balance de ambas as contas
-        updateBalanceAccount(accountOrigin.ID, newBalanceAccountOrigin)
-        updateBalanceAccount(accountDestination.ID, newBalanceAccountDestination)
 
-        json.NewEncoder(w).Encode("Transferência realizada com sucesso!")
+        erro := updateBalanceAccount(accountDestination.ID, newBalanceAccountDestination)
+        if erro != nil {
+            fmt.Println(erro)
+            json.NewEncoder(w).Encode("Erro ao realizar transferência, verifique os dados e tente novamente!")
+            return
+        }else{
+
+            //erro = nil
+            err := updateBalanceAccount(accountOrigin.ID, newBalanceAccountOrigin)
+            if err != nil {
+                accountD := getAccount(accountDestination.CPF) 
+                sum := accountD.Balance-transfer.Amount
+                //Atualiza o balance de destino (estorno)
+                updateBalanceAccount(accountOrigin.ID, sum)
+                json.NewEncoder(w).Encode("Erro ao realizar transferência, verifique os dados e tente novamente!")
+                return
+            }
+
+            json.NewEncoder(w).Encode("Transferência realizada com sucesso!")
+
+            //Armazena a transferência no BD
+            storeTransfer(transfer)
+            return
+        }        
     }else{
         json.NewEncoder(w).Encode("Saldo insuficiente.")
+        return
     }
-
-    //Armazena a transferência no BD
-    storeTransfer(transfer)
-    return
 }
 
 //Retorna todas as Transferências do usuário autenticado
