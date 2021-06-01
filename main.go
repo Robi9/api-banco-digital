@@ -33,7 +33,7 @@ var mongoOnce sync.Once
 
 //Dados de configuração do BD
 const (
-    CONNECTIONSTRING = "mongodb://localhost:27017" //localhost//mongodb
+    CONNECTIONSTRING = "mongodb://mongodb:27017" //localhost//mongodb
     DB               = "api-banco-digital"
     ACCOUNT          = "accounts"
     TRANSFER         = "transfers"
@@ -107,7 +107,7 @@ func routes() {
 }
 
 //Cria novo Account e armazena no BD
-func newAccount(w http.ResponseWriter, r *http.Request) (error){
+func newAccount(w http.ResponseWriter, r *http.Request){
 
     fmt.Println("Endpoint: apiNewAccount")
     reqBody,_ := ioutil.ReadAll(r.Body)
@@ -115,12 +115,12 @@ func newAccount(w http.ResponseWriter, r *http.Request) (error){
     var account Account
     err := json.Unmarshal(reqBody, &account)
     if err != nil {
-        return err
+        fmt.Println(err)
     }
 
     client, err := getMongoClient()
     if err != nil {
-        return err
+        fmt.Println(err)
     }
 
     //Pega hora/data de agora
@@ -138,12 +138,12 @@ func newAccount(w http.ResponseWriter, r *http.Request) (error){
     //Insere o dado e valida
     _, err = collection.InsertOne(context.TODO(), account)
     if err != nil {
-        return err
+       fmt.Println(err)
     }
 
     json.NewEncoder(w).Encode(account)
     w.WriteHeader(http.StatusCreated)
-    return nil
+    return
 }
 
 //Retorna a lista de contas cadastradas
