@@ -250,6 +250,7 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
     err := json.Unmarshal(reqBody, &transfer)
     if err != nil {
         fmt.Println(err)
+        return
     }
 
     var result, accountOrigin, accountDestination Account
@@ -283,6 +284,7 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
     client, err := getMongoClient()
     if err != nil {
         fmt.Println(err)
+        return
     }
 
     //Cria um handle da respectiva coleção.
@@ -348,7 +350,7 @@ func getAllTransfers(w http.ResponseWriter, r *http.Request) {
     if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
         ID_Account = int(claims["ID"].(float64))
     } else {
-         fmt.Println("Erro ao recuperar dados do Token")
+        fmt.Println("Erro ao recuperar dados do Token")
         return
     }
 

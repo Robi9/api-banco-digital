@@ -118,8 +118,9 @@ func TestGetBalance(t *testing.T) {
 
 //Teste da rota POST '/transfers' que realiza transferências de uma conta logada para outra cadastrada
 func TestNewTransfer(t *testing.T) {
-
-	//Usaremos o token da conta criada na função TestNewAccount()
+	//Simulamos uma transferência
+		//Lembrando que o dado de id_origem é pego no token
+		//Usaremos o token da conta criada na função TestNewAccount()
 	var jsonTrans = []byte(`{ "ID" : "", "account_origin_id" : 0, "account_destination_id" : 1, "amount" : 10.0, "created_at" : ""}`)
 	req, _ := http.NewRequest("POST", "/transfers", bytes.NewBuffer(jsonTrans))
 	req.Header.Set("Content-Type", "application/json")
@@ -131,6 +132,29 @@ func TestNewTransfer(t *testing.T) {
 	var m string
     json.Unmarshal(response.Body.Bytes(), &m)
 
-	fmt.Println(m)	
+	fmt.Println(m)
+}
 
+//Teste da rota GET '/transfers' que retorna todas as transferencias de uma conta 
+func TestGetAllTransfers(t *testing.T) {
+	//Chamamos a rota com o mesmo token da conta criada em TestNewAccount()
+	req, _ := http.NewRequest("GET", "/transfers", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MywiY3BmIjoiNTU1NSIsInNlY3JldCI6IjEyMzQ1In0.25BL0qmCrmpZKmPkUatLi5gfnLMtnZv2N-5aCXKHY1o")
+
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+    var m []Transfer
+    json.Unmarshal(response.Body.Bytes(), &m)
+    
+    //Printa todas as transferencias realizadas pelo usuário autenticado
+    for _,i := range(m) {
+    	fmt.Println("----------------")
+    	fmt.Println("ID:",i.ID)
+    	fmt.Println("Account_Origin_Id:", i.Account_Origin_Id)
+    	fmt.Println("Account_Destination_Id:", i.Account_Destination_Id)
+    	fmt.Println("Amount:", i.Amount)
+    	fmt.Println("Created_At:", i.Created_At)
+    }
 }
