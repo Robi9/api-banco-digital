@@ -33,7 +33,7 @@ var mongoOnce sync.Once
 
 //Dados de configuração do BD
 const (
-    CONNECTIONSTRING = "mongodb://mongodb:27017" //localhost
+    CONNECTIONSTRING = "mongodb://localhost:27017" //localhost//mongodb
     DB               = "api-banco-digital"
     ACCOUNT          = "accounts"
     TRANSFER         = "transfers"
@@ -97,17 +97,17 @@ func routes() {
     myRouter := mux.NewRouter().StrictSlash(true)
     myRouter.HandleFunc("/login", authLogin).Methods("POST") //Faz login
     myRouter.HandleFunc("/transfers", newTransfer).Methods("POST") //Realiza transferência
-    //myRouter.HandleFunc("/transfers", getAllTransfers) //Retorna todas transferências feitas pelo usuário logado
+    myRouter.HandleFunc("/transfers", getAllTransfers) //Retorna todas transferências feitas pelo usuário logado
     myRouter.HandleFunc("/accounts", newAccount).Methods("POST") //Cria nova conta
     myRouter.HandleFunc("/accounts", getAllAccounts) //Retorna todas as contas cadastradas
     myRouter.HandleFunc("/accounts/{ID}/balance", getBalance) //Retorna o saldo da conta que pertence ao ID informado
-    //myRouter.HandleFunc("/deposits", newDeposit).Methods("POST") //Realiza um depósito em uma conta cadastrada
+    myRouter.HandleFunc("/deposits", newDeposit).Methods("POST") //Realiza um depósito em uma conta cadastrada
 
     log.Fatal(http.ListenAndServe(":5000", myRouter))
 }
 
 //Cria novo Account e armazena no BD
-func newAccount(w http.ResponseWriter, r *http.Request) {
+func newAccount(w http.ResponseWriter, r *http.Request) (error){
 
     fmt.Println("Endpoint: apiNewAccount")
     reqBody,_ := ioutil.ReadAll(r.Body)
@@ -115,12 +115,12 @@ func newAccount(w http.ResponseWriter, r *http.Request) {
     var account Account
     err := json.Unmarshal(reqBody, &account)
     if err != nil {
-        fmt.Println(err)
+        return err
     }
 
     client, err := getMongoClient()
     if err != nil {
-        fmt.Println(err)
+        return err
     }
 
     //Pega hora/data de agora
@@ -138,10 +138,12 @@ func newAccount(w http.ResponseWriter, r *http.Request) {
     //Insere o dado e valida
     _, err = collection.InsertOne(context.TODO(), account)
     if err != nil {
-        fmt.Println(err)
+        return err
     }
 
     json.NewEncoder(w).Encode(account)
+    w.WriteHeader(http.StatusCreated)
+    return nil
 }
 
 //Retorna a lista de contas cadastradas
