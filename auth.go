@@ -2,60 +2,28 @@ package main
 
 import (
     "net/http"
-    "io/ioutil"
-    "encoding/json"
+    //"io/ioutil"
+    //"encoding/json"
     "fmt"
     "github.com/dgrijalva/jwt-go"
 )
-//Estrutura de Login
-type Login struct {
-    CPF string    `json:"cpf"`
-    Secret string `json:"secret"`
-}
 
 //Gera o Token ao realizar um  login
-func authLogin(w http.ResponseWriter, r *http.Request) {
+func auth(account Account, result Login) (string, error) {
 
-    w.Header().Set("Content-Type", "application/json")
-
-    reqBody,_ := ioutil.ReadAll(r.Body)
-
-    var result Login
-    err := json.Unmarshal(reqBody, &result)
+    //Usa o CPF e o secret para a geração
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+        "ID"    : account.ID,
+        "cpf"   : result.CPF,
+        "secret": result.Secret,
+    })
+    //Faz a assinatura com a key "secret" e valida
+    tokenString, err := token.SignedString([]byte("secret"))
+    //fmt.Println(err)
     if err != nil {
-        fmt.Println(err)
+        return "",err
     }
-
-    fmt.Println(result.CPF)
-    //Busca a conta com o CPF informado no login
-    account := getAccount(result.CPF)
-
-    //Valida se o secret informado no login é igual ao cadastrado, se sim inicia a geração do token
-    if checkSecret(account.Secret, result.Secret) {
-        //Usa o CPF e o secret para a geração
-        token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-            "ID"    : account.ID,
-            "cpf"   : result.CPF,
-            "secret": result.Secret,
-        })
-        //Faz a assinatura com a key "secret" e valida
-        tokenString, err := token.SignedString([]byte("secret")) //VER SE EU CONSIGO ESCONDER
-        //fmt.Println(err)
-        if err != nil {
-            w.WriteHeader(http.StatusInternalServerError)
-            w.Write([]byte("Erro ao gerar JWT token: " + err.Error()))
-            return
-        }
-
-        w.Header().Set("Authorization", tokenString)
-        w.WriteHeader(http.StatusOK)
-        w.Write([]byte("Token: " + tokenString))
-
-    }else{
-        w.WriteHeader(http.StatusUnauthorized)
-        w.Write([]byte("Name e secret não conferem, tente novamente!"))
-        return
-    }    
+    return tokenString, err
 }
 
 //Verifica e retorna o token da autenticação

@@ -6,6 +6,7 @@ import (
     "net/http"
     "github.com/gorilla/mux"
     "fmt"
+    //"unsafe"
     "sync"
     "context"
     "strconv"
@@ -33,7 +34,7 @@ var mongoOnce sync.Once
 
 //Dados de configuração do BD
 const (
-    CONNECTIONSTRING = "mongodb://mongodb:27017" //localhost//mongodb
+    CONNECTIONSTRING = "mongodb://localhost:27017" //localhost//mongodb
     DB               = "api-banco-digital"
     ACCOUNT          = "accounts"
     TRANSFER         = "transfers"
@@ -92,10 +93,16 @@ type Deposit struct{
 
 }
 
+//Estrutura de Login
+type Login struct {
+    CPF string    `json:"cpf"`
+    Secret string `json:"secret"`
+}
+
 //Função de rotas
 func routes() {
     myRouter := mux.NewRouter().StrictSlash(true)
-    myRouter.HandleFunc("/login", authLogin).Methods("POST") //Faz login
+    myRouter.HandleFunc("/login", newLogin).Methods("POST") //Faz login
     myRouter.HandleFunc("/transfers", newTransfer).Methods("POST") //Realiza transferência
     myRouter.HandleFunc("/transfers", getAllTransfers) //Retorna todas transferências feitas pelo usuário logado
     myRouter.HandleFunc("/accounts", newAccount).Methods("POST") //Cria nova conta
@@ -116,11 +123,13 @@ func newAccount(w http.ResponseWriter, r *http.Request){
     err := json.Unmarshal(reqBody, &account)
     if err != nil {
         fmt.Println(err)
+        return
     }
 
     client, err := getMongoClient()
     if err != nil {
         fmt.Println(err)
+        return
     }
 
     //Pega hora/data de agora
@@ -139,10 +148,11 @@ func newAccount(w http.ResponseWriter, r *http.Request){
     _, err = collection.InsertOne(context.TODO(), account)
     if err != nil {
        fmt.Println(err)
+       return
     }
-
+    w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(account)
-    w.WriteHeader(http.StatusCreated)
+    
     return
 }
 
@@ -157,6 +167,8 @@ func getAllAccounts(w http.ResponseWriter, r *http.Request) {
     client, err := getMongoClient()
     if err != nil {
         fmt.Println(err)
+        w.WriteHeader(http.StatusNotFound)
+        return
     }
     //Cria um handle da respectiva coleção
     collection := client.Database(DB).Collection(ACCOUNT)
@@ -165,6 +177,8 @@ func getAllAccounts(w http.ResponseWriter, r *http.Request) {
     cur, findError := collection.Find(context.TODO(), filter)
     if findError != nil {
         fmt.Println(findError)
+        w.WriteHeader(http.StatusNotFound)
+        return
     }
     //Map de resultados para a slice
     for cur.Next(context.TODO()) {
@@ -172,12 +186,16 @@ func getAllAccounts(w http.ResponseWriter, r *http.Request) {
         err := cur.Decode(&t)
         if err != nil {
             fmt.Println(err)
+            w.WriteHeader(http.StatusNotFound)
+            return
         }
         accounts = append(accounts, t)
     }
     // quando terminado fecha o cursor
     cur.Close(context.TODO())
+    //w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(accounts)
+    return
 }
 
 func getBalance(w http.ResponseWriter, r *http.Request) {
@@ -195,6 +213,7 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
     client, err := getMongoClient()
     if err != nil {
         fmt.Println(err)
+        return
     }
     //Cria um handle da respectiva coleção.
     collection := client.Database(DB).Collection(ACCOUNT)
@@ -203,8 +222,12 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
 
     if err == nil {
         json.NewEncoder(w).Encode(result.Balance)
+        //w.WriteHeader(http.StatusCreated)
+        return
     } else {
         fmt.Println(err)
+        w.WriteHeader(http.StatusNotFound)
+        return
     }
 }
 
@@ -217,7 +240,7 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
     //Verifica e pega token
     token := verifyToken(w,r)
     if token == nil{
-        json.NewEncoder(w).Encode("Token inválido, entre em sua conta novamente!")
+        json.NewEncoder(w).Encode("Acesso inválido, entre em sua conta novamente!")
         return
     }
    
@@ -362,6 +385,16 @@ func newDeposit(w http.ResponseWriter, r *http.Request) {
     //Pega conta para depósito
     accountDestination := getAccount(deposit.CPF)
 
+    if accountDestination.CPF != deposit.CPF {
+        fmt.Println("CPF informado não possui conta cadastrada, verifique os dados e tente novamente!")
+        return
+    }
+
+    if deposit.Account_Destination_Id != accountDestination.ID {
+        fmt.Println("CPF informado não pertence a conta do ID informado, verifique os dados e tente novamente!")
+        return
+    }
+
     deposit.Account_Destination_Id = accountDestination.ID
 
     //Calcula novo balance da conta de depósito
@@ -378,6 +411,41 @@ func newDeposit(w http.ResponseWriter, r *http.Request) {
         storeDeposit(deposit)
         json.NewEncoder(w).Encode("Depósito realizado com sucesso!")
     }    
+}
+
+func newLogin(w http.ResponseWriter, r *http.Request) {
+     fmt.Println("Endpoint: apiLogin")
+     w.Header().Set("Content-Type", "application/json")
+
+    reqBody,_ := ioutil.ReadAll(r.Body)
+
+    var result Login
+    err := json.Unmarshal(reqBody, &result)
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    fmt.Println(result.CPF)
+    //Busca a conta com o CPF informado no login
+    account := getAccount(result.CPF)
+
+    //Valida se o secret informado no login é igual ao cadastrado, se sim inicia a geração do token
+    if checkSecret(account.Secret, result.Secret) && account.CPF == result.CPF{
+        //Geração do token
+        tokenString, erro := auth(account, result)
+        if tokenString == ""{
+            w.WriteHeader(http.StatusInternalServerError)
+            w.Write([]byte("Erro ao gerar JWT token: " + erro.Error()))
+            return
+        }
+        w.Header().Set("Authorization", tokenString)
+        w.WriteHeader(http.StatusOK)
+        w.Write([]byte("Token: " + tokenString)) 
+    }else{
+        w.WriteHeader(http.StatusUnauthorized)
+        w.Write([]byte("CPF ou Secret não conferem, tente novamente!"))
+        return
+    }     
 }
 
 func main() {
