@@ -19,7 +19,7 @@ func TestAuth(t *testing.T) {
 	fmt.Println("Token:", token)
 	assert.NoError(t, err)
 }
-
+//Testa a função verifyToken()
 func TestVerifyToken(t *testing.T) {
 	fmt.Println("Teste de verifyToken()")
 	
