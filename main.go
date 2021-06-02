@@ -244,8 +244,8 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
     start := time.Now()
 
     //Verifica e pega token
-    token := verifyToken(w,r)
-    if token == nil{
+    token,rr := verifyToken(w,r)
+    if rr != nil{
         json.NewEncoder(w).Encode("Acesso inválido, entre em sua conta novamente!")
         return
     }
@@ -281,7 +281,8 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
     transfer.Created_At = start.Format(("02/01/2006 15:04:05"))
 
     //Busca accountOrigin partindo do CPF
-    accountOrigin,rr := getAccount(result.CPF)
+    rr = nil
+    accountOrigin,rr = getAccount(result.CPF)
     if rr != nil {
         return
     }
@@ -355,8 +356,8 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
 func getAllTransfers(w http.ResponseWriter, r *http.Request) {
     fmt.Println("Endpoint: apiGetAllTransfers")
 
-    token := verifyToken(w,r)
-    if token == nil{
+    token,rr := verifyToken(w,r)
+    if rr != nil{
         json.NewEncoder(w).Encode("Token inválido, entre em sua conta novamente!")
         return
     }

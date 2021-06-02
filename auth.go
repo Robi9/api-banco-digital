@@ -2,8 +2,6 @@ package main
 
 import (
     "net/http"
-    //"io/ioutil"
-    //"encoding/json"
     "fmt"
     "github.com/dgrijalva/jwt-go"
 )
@@ -19,7 +17,6 @@ func auth(account Account, result Login) (string, error) {
     })
     //Faz a assinatura com a key "secret" e valida
     tokenString, err := token.SignedString([]byte("secret"))
-    //fmt.Println(err)
     if err != nil {
         return "",err
     }
@@ -27,7 +24,7 @@ func auth(account Account, result Login) (string, error) {
 }
 
 //Verifica e retorna o token da autenticação
-func verifyToken(w http.ResponseWriter, r *http.Request) (*jwt.Token) {
+func verifyToken(w http.ResponseWriter, r *http.Request) (*jwt.Token, error) {
 
     w.Header().Set("Content-Type", "application/json")
     //Pega token 
@@ -45,9 +42,9 @@ func verifyToken(w http.ResponseWriter, r *http.Request) (*jwt.Token) {
     if err != nil{
         fmt.Println("Token Inválido.")
         fmt.Println(err)
-        return nil
+        return nil, err
     }
 
-    return token
+    return token, nil
 
 }
