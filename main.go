@@ -197,7 +197,7 @@ func getAllAccounts(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(accounts)
     return
 }
-
+//Retorna o valor do balance da conta com o ID informado
 func getBalance(w http.ResponseWriter, r *http.Request) {
    
     fmt.Println("Endpoint: apiGetBalance")
@@ -230,7 +230,7 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
         return
     }
 }
-
+//Realiza uma transferência da conta autenticada para outra conta cadastrada
 func newTransfer(w http.ResponseWriter, r *http.Request) {
     fmt.Println("Endpoint: apiNewTransfer")
 
@@ -276,6 +276,12 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
 
     //Busca accountOrigin partindo do CPF
     accountOrigin = getAccount(result.CPF)
+
+    //Verifica se a conta de origem é igual a de destino
+    if accountOrigin.ID == transfer.Account_Destination_Id {
+        fmt.Println("Não é possível realizar transferência para si mesmo, informe uma conta de destino diferente.")
+        return
+    }
 
     //Define a consulta do filtro para buscar um documento específico da coleção
     filter := bson.D{primitive.E{Key: "_id", Value: transfer.Account_Destination_Id}}
@@ -361,6 +367,7 @@ func getAllTransfers(w http.ResponseWriter, r *http.Request) {
     client, err := getMongoClient()
     if err != nil {
         fmt.Println(err)
+        return
     }
     //Cria um handle da respectiva coleção
     collection := client.Database(DB).Collection(TRANSFER)
@@ -369,6 +376,7 @@ func getAllTransfers(w http.ResponseWriter, r *http.Request) {
     cur, findError := collection.Find(context.TODO(), filter)
     if findError != nil {
         fmt.Println(findError)
+        return
     }
     //Map de resultados para a slice
     for cur.Next(context.TODO()) {
@@ -376,6 +384,7 @@ func getAllTransfers(w http.ResponseWriter, r *http.Request) {
         err := cur.Decode(&t)
         if err != nil {
             fmt.Println(err)
+            return
         }
         transfers = append(transfers, t)
     }
@@ -395,6 +404,7 @@ func newDeposit(w http.ResponseWriter, r *http.Request) {
     err := json.Unmarshal(reqBody, &deposit)
     if err != nil {
         fmt.Println(err)
+        return
     }
 
     //Gera um ID para a transferencia
@@ -447,7 +457,7 @@ func newLogin(w http.ResponseWriter, r *http.Request) {
         fmt.Println(err)
     }
 
-    fmt.Println(result.CPF)
+    //fmt.Println(result.CPF)
     //Busca a conta com o CPF informado no login
     account := getAccount(result.CPF)
 
@@ -462,10 +472,12 @@ func newLogin(w http.ResponseWriter, r *http.Request) {
         }
         w.Header().Set("Authorization", tokenString)
         w.WriteHeader(http.StatusOK)
-        w.Write([]byte("Token: " + tokenString)) 
+        //w.Write([]byte("Token: " + tokenString))
+        json.NewEncoder(w).Encode("Token: " + tokenString) 
+
     }else{
         w.WriteHeader(http.StatusUnauthorized)
-        w.Write([]byte("CPF ou Secret não conferem, tente novamente!"))
+        json.NewEncoder(w).Encode("CPF ou Secret não conferem, tente novamente!")
         return
     }     
 }

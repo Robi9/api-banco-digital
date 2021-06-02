@@ -45,6 +45,7 @@ func verifyToken(w http.ResponseWriter, r *http.Request) (*jwt.Token) {
     if err != nil{
         fmt.Println("Token Inválido.")
         fmt.Println(err)
+        return nil
     }
 
     return token

@@ -141,7 +141,7 @@ func TestGetAllTransfers(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/transfers", nil)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MywiY3BmIjoiNTU1NSIsInNlY3JldCI6IjEyMzQ1In0.25BL0qmCrmpZKmPkUatLi5gfnLMtnZv2N-5aCXKHY1o")
-
+	
 	response := executeRequest(req)
 	checkResponseCode(t, http.StatusOK, response.Code)
 
@@ -158,3 +158,19 @@ func TestGetAllTransfers(t *testing.T) {
     	fmt.Println("Created_At:", i.Created_At)
     }
 }
+
+//Teste da '/login' que realiza um login e faz a autenticação do usuário logado
+func TestNewLogin(t *testing.T) {
+	//Login com os dados da conta criada em TestNewAccount()
+	var jsonLogin = []byte(`{ "cpf" : "555", "secret" : "12345"}`)
+	req, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(jsonLogin))
+	req.Header.Set("Content-Type", "application/json")
+	
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var m string
+    json.Unmarshal(response.Body.Bytes(), &m)
+	fmt.Println(m)
+}
+
