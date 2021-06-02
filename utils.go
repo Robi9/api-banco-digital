@@ -10,7 +10,7 @@ import (
 
 )
 //Retorna uma conta partindo do cpf do usuário
-func getAccount(cpf string) (Account) {
+func getAccount(cpf string) (Account, error) {
 
     var result Account
     //Define a consulta do filtro para buscar um documento específico da coleção
@@ -27,33 +27,60 @@ func getAccount(cpf string) (Account) {
 
     if err != nil {
         fmt.Println(err)
-        return result
+        return result, err
     }
 
-    return result
+    return result, err
+}
+
+func verifyAccountID(id int) (bool, error){
+	var result Account
+    //Define a consulta do filtro para buscar um documento específico da coleção
+    filter := bson.D{primitive.E{Key: "_id", Value: id}}
+    //Faz a conexão com o MongoDB.
+    client, err := getMongoClient()
+    if err != nil {
+        fmt.Println(err)
+    }
+    //Cria um handle da respectiva coleção.
+    collection := client.Database(DB).Collection(ACCOUNT)
+    //Busca a account e faz a validação
+    err = collection.FindOne(context.TODO(), filter).Decode(&result)
+
+    if err != nil {
+        fmt.Println(err)
+        return false,err
+    }
+
+    return true,err
 }
 
 //Transforma o secret em hash
-func SecretToHash(secret string) string {
+func SecretToHash(secret string) (string, error) {
     cost := bcrypt.DefaultCost
     hash, err := bcrypt.GenerateFromPassword([]byte(secret), cost)
     if err != nil {
         fmt.Println(err)
+        return "",err
     }
-    return string(hash)
+    return string(hash), err
 }
 //Verifica se o hash do BD é igual ao secret enviado 
-func checkSecret(secretH string, secret string) bool {
+func checkSecret(secretH string, secret string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword([]byte(secretH), []byte(secret))
 	if err != nil {
-		return false
+		return false, err
 	}
-	return true
+	return true, err
 }
 
 //Atualiza o balance de uma conta para um novo valor
 func updateBalanceAccount(id int, balance float64) (error){
-
+	v, err := verifyAccountID(id)
+	if v != true {
+		fmt.Println("Conta não existe.")
+		return err
+	}
 	//Define a consulta do filtro para buscar um documento específico da coleção
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
 
@@ -68,18 +95,18 @@ func updateBalanceAccount(id int, balance float64) (error){
 		fmt.Println(err)
 	}
 	collection := client.Database(DB).Collection(ACCOUNT)
-
+	
 	//Executa a operação UpdateOne e valida o erro.
 	_, err = collection.UpdateOne(context.TODO(), filter, updater)
 	if err != nil {
+		fmt.Println("Conta não encontrada.")
 		return err
 	}
-
 	return nil
 }
 
 //Armazena a transferencia no BD
-func storeTransfer(transfer Transfer) {
+func storeTransfer(transfer Transfer) (error){
 
 	client, err := getMongoClient()
     if err != nil {
@@ -90,14 +117,14 @@ func storeTransfer(transfer Transfer) {
     //Insere o dado e valida
     _, err = collection.InsertOne(context.TODO(), transfer)
     if err != nil {
-        fmt.Println(err)
-        return
+        //fmt.Println(err)
+        return err
     }
-    return
+    return err
 }
 
 //Armazena depósitos realizados no BD
-func storeDeposit(deposit Deposit) {
+func storeDeposit(deposit Deposit) (error){
 
 	client, err := getMongoClient()
     if err != nil {
@@ -109,7 +136,7 @@ func storeDeposit(deposit Deposit) {
     _, err = collection.InsertOne(context.TODO(), deposit)
     if err != nil {
         fmt.Println(err)
-        return
+        return err
     }
-    return	
+    return err
 }

@@ -137,7 +137,13 @@ func newAccount(w http.ResponseWriter, r *http.Request){
     //Formata hora/data e adiciona em Created_At
     account.Created_At = start.Format(("02/01/2006 15:04:05"))
     //Transforma secret em hash
-    account.Secret = SecretToHash(account.Secret)
+    err = nil
+    account.Secret,err = SecretToHash(account.Secret)
+    if err != nil {
+        fmt.Println("Erro ao transformar secret em hash.")
+        json.NewEncoder(w).Encode("Erro ao cadastrar-se, tente novamente!")
+        return        
+    }
 
     //Zera valor da conta
     account.Balance =  0.0
@@ -275,7 +281,10 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
     transfer.Created_At = start.Format(("02/01/2006 15:04:05"))
 
     //Busca accountOrigin partindo do CPF
-    accountOrigin = getAccount(result.CPF)
+    accountOrigin,rr := getAccount(result.CPF)
+    if rr != nil {
+        return
+    }
 
     //Verifica se a conta de origem é igual a de destino
     if accountOrigin.ID == transfer.Account_Destination_Id {
@@ -322,7 +331,7 @@ func newTransfer(w http.ResponseWriter, r *http.Request) {
             //erro = nil
             err := updateBalanceAccount(accountOrigin.ID, newBalanceAccountOrigin)
             if err != nil {
-                accountD := getAccount(accountDestination.CPF) 
+                accountD,_ := getAccount(accountDestination.CPF) 
                 sum := accountD.Balance-transfer.Amount
                 //Atualiza o balance de destino (estorno)
                 updateBalanceAccount(accountOrigin.ID, sum)
@@ -415,15 +424,15 @@ func newDeposit(w http.ResponseWriter, r *http.Request) {
     deposit.Created_At = start.Format(("02/01/2006 15:04:05"))
 
     //Pega conta para depósito
-    accountDestination := getAccount(deposit.CPF)
+    accountDestination,rr := getAccount(deposit.CPF)
 
-    if accountDestination.CPF != deposit.CPF {
-        fmt.Println("CPF informado não possui conta cadastrada, verifique os dados e tente novamente!")
+    if rr != nil {
+        json.NewEncoder(w).Encode("CPF informado não possui conta cadastrada, verifique os dados e tente novamente!")
         return
     }
 
     if deposit.Account_Destination_Id != accountDestination.ID {
-        fmt.Println("CPF informado não pertence a conta do ID informado, verifique os dados e tente novamente!")
+        json.NewEncoder(w).Encode("CPF informado não pertence a conta do ID informado, verifique os dados e tente novamente!")
         return
     }
 
@@ -459,10 +468,13 @@ func newLogin(w http.ResponseWriter, r *http.Request) {
 
     //fmt.Println(result.CPF)
     //Busca a conta com o CPF informado no login
-    account := getAccount(result.CPF)
-
+    account, rr := getAccount(result.CPF)
+    if rr != nil {
+        json.NewEncoder(w).Encode("Não existe conta cadastrada para este CPF!")
+    }
+    check,_:=checkSecret(account.Secret, result.Secret)
     //Valida se o secret informado no login é igual ao cadastrado, se sim inicia a geração do token
-    if checkSecret(account.Secret, result.Secret) && account.CPF == result.CPF{
+    if check{
         //Geração do token
         tokenString, erro := auth(account, result)
         if tokenString == ""{
@@ -477,7 +489,7 @@ func newLogin(w http.ResponseWriter, r *http.Request) {
 
     }else{
         w.WriteHeader(http.StatusUnauthorized)
-        json.NewEncoder(w).Encode("CPF ou Secret não conferem, tente novamente!")
+        json.NewEncoder(w).Encode("Secret não confere, tente novamente!")
         return
     }     
 }

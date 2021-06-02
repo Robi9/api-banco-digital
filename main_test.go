@@ -162,7 +162,7 @@ func TestGetAllTransfers(t *testing.T) {
 //Teste da '/login' que realiza um login e faz a autenticação do usuário logado
 func TestNewLogin(t *testing.T) {
 	//Login com os dados da conta criada em TestNewAccount()
-	var jsonLogin = []byte(`{ "cpf" : "555", "secret" : "12345"}`)
+	var jsonLogin = []byte(`{ "cpf" : "5555", "secret" : "12345"}`)
 	req, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(jsonLogin))
 	req.Header.Set("Content-Type", "application/json")
 	
