@@ -44,10 +44,9 @@ Nossa aplicação conta com algumas rotas:
 
 ### [Rota de Criação de Conta](#accpost)
 Esta rota recebe os dados da conta em json na solicitação, abaixo está um exemplo de solicitação com a ferramenta ``curl``. Antes, se não tiver a ferramenta instalada
-poderá instalá-la com o comando ``sudo apt- get install curl`` no terminal. 
+poderá instalá-la com o comando ``sudo apt-get install curl`` no terminal. 
 ```
-curl -H "Content-Type:application/json" -X POST -d '{ "ID" : 1, "name" : "Fulano", "cpf" : "111.111.111-11", "secret" : "12345", "balance" : 10.0, "created_at" : ""}' \
-"http://localhost:5000/accounts"
+curl -H "Content-Type:application/json" -X POST -d '{ "ID" : 1, "name" : "Fulano", "cpf" : "111.111.111-11", "secret" : "12345", "balance" : 10.0, "created_at" : ""}' "http://localhost:5000/accounts"
 ```
 Esta solicitação criará uma nova conta com os dados passados no json.
 A informação de ``created_at`` é gerada pela aplicação.
@@ -65,8 +64,7 @@ curl http://localhost:5000/accounts/1/balance
 ### [Rota de Realização de Transferência](#transfpost)
 Esta rota realiza transferências entre a conta logada e uma outra conta cadastrada. Abaixo temos o exemplo da solicitação:
 ```
-curl -i POST -H "Content-Type: application/json" -H "Authorization: <token>" -d '{ "ID": "", "account_origin_id" : 0, "account_destination_id" : 2, "amount" : 10.0, "created_at" : ""}
-' "http://localhost:5000/transfers"
+curl -i POST -H "Content-Type: application/json" -H "Authorization: <token>" -d '{ "ID": "", "account_origin_id" : 0, "account_destination_id" : 2, "amount" : 10.0, "created_at" : ""}' "http://localhost:5000/transfers"
 ```
 Para realizar a transferência você precisa estar logado, o login autentica um usuário e gera um token, com ele você pode realizar a solicitação.
 O ``account_origin_id`` é extraído do token de autenticação e os outros dados que não são passados no json são gerados pela api. (O valor '0' significa vazio)
