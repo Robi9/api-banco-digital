@@ -1,7 +1,7 @@
 package main
 
 import (
-    
+    "strconv"
     "fmt"
     "context"
     "go.mongodb.org/mongo-driver/bson"
@@ -81,6 +81,9 @@ func updateBalanceAccount(id int, balance float64) (error){
 		fmt.Println("Conta não existe.")
 		return err
 	}
+	f := fmt.Sprintf("%.2f",balance)
+	balance,_ = strconv.ParseFloat(f, 64)
+
 	//Define a consulta do filtro para buscar um documento específico da coleção
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
 

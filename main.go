@@ -6,7 +6,6 @@ import (
     "net/http"
     "github.com/gorilla/mux"
     "fmt"
-    //"unsafe"
     "sync"
     "context"
     "strconv"
@@ -34,7 +33,7 @@ var mongoOnce sync.Once
 
 //Dados de configuração do BD
 const (
-    CONNECTIONSTRING = "mongodb://mongodb:27017" 
+    CONNECTIONSTRING = "mongodb://localhost:27017" 
     DB               = "api-banco-digital"
     ACCOUNT          = "accounts"
     TRANSFER         = "transfers"
@@ -232,6 +231,7 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
         return
     } else {
         fmt.Println(err)
+        json.NewEncoder(w).Encode("Conta não encontrada!")
         w.WriteHeader(http.StatusNotFound)
         return
     }
@@ -472,6 +472,7 @@ func newLogin(w http.ResponseWriter, r *http.Request) {
     account, rr := getAccount(result.CPF)
     if rr != nil {
         json.NewEncoder(w).Encode("Não existe conta cadastrada para este CPF!")
+        return
     }
     check,_:=checkSecret(account.Secret, result.Secret)
     //Valida se o secret informado no login é igual ao cadastrado, se sim inicia a geração do token
@@ -486,6 +487,7 @@ func newLogin(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Authorization", tokenString)
         w.WriteHeader(http.StatusOK)
         //w.Write([]byte("Token: " + tokenString))
+        json.NewEncoder(w).Encode("Login realizado com sucesso!")
         json.NewEncoder(w).Encode("Token: " + tokenString) 
 
     }else{
