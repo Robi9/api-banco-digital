@@ -33,7 +33,7 @@ var mongoOnce sync.Once
 
 //Dados de configuração do BD
 const (
-    CONNECTIONSTRING = "mongodb://localhost:27017" 
+    CONNECTIONSTRING = "mongodb://mongodb:27017" 
     DB               = "api-banco-digital"
     ACCOUNT          = "accounts"
     TRANSFER         = "transfers"
