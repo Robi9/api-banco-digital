@@ -81,6 +81,7 @@ func updateBalanceAccount(id int, balance float64) (error){
 		fmt.Println("Conta não existe.")
 		return err
 	}
+	//Formata o balance para "%.2f"
 	f := fmt.Sprintf("%.2f",balance)
 	balance,_ = strconv.ParseFloat(f, 64)
 
